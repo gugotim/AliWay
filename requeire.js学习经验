@@ -1,0 +1,52 @@
+requeire.js学习经验
+1.baseUrl 相对于data-main 同目录，如 data-main=“js/main”，则baseUrl为js文件夹，
+但是可以在main.js使用requirejs.config({ baseUrl: ‘js/lib’ })强制指定baseUrl为js/lib
+
+2.baseUrl意味着未在paths中说明时，依赖的加载位置相对于baseUrl,如
+define([‘jquery’], function($){}); 意味着jquery.js从js/lib文件夹中寻找，而不是当前目录的jquery.js，若想加载当前目录的 jquery，则使用’./jquery’
+
+3.path用于对依赖进行管理，以写更少的代码，如文件组织结构为 
+js/
+  app
+    popup.js
+  lib
+    jquery-1.4.3.min.js
+    require.js
+  main.js
+则在main.js中设置require.config({ baseUrl: ‘js/lib’, paths: { app: ‘../app’ }, jquery: ‘jquery-1-4.3.min.js' })
+则后续加载jquery可直接写define([‘jquery'], function($){}),
+甚至可以 jqueryIe: ‘jquery-1-x.js’, jqueryModern: ‘jquery-2.x.js’
+define([‘jqueryIe’, ‘jqueryModern’], function ( old$, new$ ) {})来在一个文件中使用不同版本的 jquery
+同时paths的定义有助于少写文件路径，如此例中js/app/pop.js调用依赖时可直接写app/popup，其中.js由 require自动添加，app由path中app: ../app指定位置(相对于baseUrl: js/lib)
+
+4.只有在define的依赖加载完毕之后函数参数才会被调用，
+当页面中除了加载require.js还加载的了其他JS文件中，这些文件为异步调用，因此无法保证后面的js文件可以直接使用定义的依赖
+
+5.模块使用define都返回了一个对象，通过使用这个对象的方法调用模块，在函数中以参数形式被调用，顺序和依赖说明顺序一致，如
+requirejs([‘jquery’, ‘popup’, ’tab’], function($, popup, tab) {})
+
+6.在define内部以变量名使用模块时，如
+var popup = require(‘./popup’);时，要加上 require的依赖和popup相对地址的依赖，如
+//kkk.js
+define([‘require’, ‘./popup’], function(require) {
+  var popup = require(‘./popup’);
+  pop.func();
+});
+也可以简写成
+define(funtion(require) {
+  ...
+});
+使用相对有位置有利于在演示时在当前目录建立测试模块，并使用相邻模块
+
+7.生成于相对于当前模块的url
+//aaa.js	js/app/aaa.js
+var url = require.toUrl(‘./popup.css’); //	js/app/popup.css
+
+8.控制台调用模块方法
+只有模块已经通过require(‘module/name’)定义才可以使用，方法：
+require(‘module/name’).func();
+
+9.循环依赖
+当a、b相互依赖时，可以在b中返回了函数，其调用了a的某个函数，则a能访问b，
+另外可以使用特殊的exports作为中介，如在b中定义
+exports.foo = function() { a.bar(); }	
